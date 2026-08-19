@@ -1,20 +1,19 @@
-use std::ops::{Add};
+use std::{ops::Add, vec};
 
-use rand::{RngExt, rng};
+use rand::{RngExt, rng, seq::SliceRandom};
 
 #[derive(Copy, Clone)]
 pub struct Card
 {
-    ch: [char; 3],
+    pub ch: [char; 3],
     pub val: usize,
-    pub has_been_dealt: bool,
 }
 
 impl Card
 {
     pub fn new(display: [char; 3], val_new: usize) -> Card
     {
-        Card { ch: (display), val: (val_new), has_been_dealt: false }
+        Card { ch: (display), val: (val_new) }
     }
 
     pub fn render(&self)
@@ -32,11 +31,12 @@ impl Card
 
 pub struct Deck
 {
-    pub cards: [Card; 52],
+    pub cards: Vec<Card>,
+    pub deck_count: usize,
 }
 
 impl Deck {
-    pub fn new() -> Deck
+    pub fn new(deck_count: usize) -> Deck
     {
         let card_displays: [&str; 13] = [
             "A",
@@ -61,28 +61,47 @@ impl Deck {
             "♠"
         ];
 
-        let mut card_buffer: [Card; 52] = [Card::new([' ', ' ', ' '], 0); 52];
+        let mut card_buffer: Vec<Card> = Vec::new();
 
-        for i in 0..4
+        for d in 0..deck_count
         {
-            for j in 0..13
+            for i in 0..4
             {
-                //Calculates the suit and value of the card, and composes it into a string
-                //Adds additional " " to make sure the length is always 3 or more
-                let card_display_string: String = card_displays[j].to_string().add(suits[i]).add(" ");
-
-                card_buffer[j + i * 13] = Card::new([
-                        card_display_string.chars().nth(0).unwrap(),
-                        card_display_string.chars().nth(1).unwrap(),
-                        card_display_string.chars().nth(2).unwrap()
-                    ],
-                    (j + 1).clamp(1, 10));
+                for j in 0..13
+                {
+                    //Calculates the suit and value of the card, and composes it into a string
+                    //Adds additional " " to make sure the length is always 3 or more
+                    let card_display_string: String = card_displays[j].to_string().add(suits[i]).add(" ");
+    
+                    card_buffer.push( Card::new([
+                            card_display_string.chars().nth(0).unwrap(),
+                            card_display_string.chars().nth(1).unwrap(),
+                            card_display_string.chars().nth(2).unwrap()
+                        ],
+                        (j + 1)));
+                }
             }
         }
 
+        card_buffer.shuffle(&mut rand::rng());
+
         return  Deck {
             cards: card_buffer,
+            deck_count: deck_count,
         };
+    }
+
+    pub fn shuffle(&mut self)
+    {
+        self.cards = Deck::new(self.deck_count).cards;
+    }
+
+    pub fn render_deck(&self)
+    {
+        for c in self.cards.clone()
+        {
+            println!("{0}", c.val);
+        }
     }
 }
 
@@ -90,6 +109,7 @@ pub struct Hand
 {
     pub cards: Vec<Card>,
     pub value: usize,
+    pub busted: bool,
 }
 
 impl Hand
@@ -98,22 +118,23 @@ impl Hand
     {
         Hand {
             cards: Vec::new(),
-            value: 0
+            value: 0,
+            busted: false,
         }
     }
 
-    pub fn draw_cards(&mut self, amount: usize, deck: &mut Deck)
+    pub fn draw_cards(&mut self, card_count: usize, deck: &mut Deck)
     {
-        for i in 0..amount
+        if deck.cards.len() < card_count
         {
-            let mut drawn_card: &mut Card = &mut deck.cards[rng().random_range(0..51)];
+            deck.shuffle();
+        }
 
-            while drawn_card.has_been_dealt {
-                drawn_card = &mut deck.cards[rng().random_range(0..51)];
-            }
-    
-            drawn_card.has_been_dealt = true;
-            self.cards.push(*drawn_card);
+        for _ in 0..card_count
+        {
+            let drawn_card: Card = deck.cards[0];
+            self.cards.push(drawn_card);
+            deck.cards.remove(0);
         }
     }
 
@@ -141,10 +162,10 @@ impl Hand
                 has_ace = true;
             }
             
-            self.value += card.val;
+            self.value += card.val.clamp(1, 10);
         }
 
-        if(has_ace && self.value <= 11)
+        if has_ace && self.value <= 11
         {
             self.value += 10;
         }

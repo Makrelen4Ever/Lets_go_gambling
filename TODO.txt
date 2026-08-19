@@ -1,16 +1,8 @@
 TODO:
 
+Add persistent storage, to keep scores between games.
+Potentially adding a high score
+
 Blackjack:
     Implement splitting,
     Potentially implement insurance,
-    make the deck carry over, and shuffle when out of cards,
-
-Roulette:
-    Implement simple roulette with:
-        Individual tile,
-        Even/Odd,
-        Red/Black,
-        First/middle/last third of the board,
-
-Slot machine:
-    I'll figure it out later, when I'm done with the roulette.

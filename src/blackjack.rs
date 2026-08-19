@@ -1,6 +1,6 @@
-use crate::game::Game;
-use crate::cards::{Card, Deck, Hand};
-use crate::rendering::{Color, switch_color, clear_terminal};
+use crate::game::*;
+use crate::cards::*;
+use crate::rendering::*;
 
 impl Game
 {
@@ -8,56 +8,35 @@ impl Game
         clear_terminal();
 
         //Initialization
-        let mut deck: Deck = Deck::new();
         let mut player_hand: Hand = Hand::new();
         let mut dealer_hand: Hand = Hand::new();
 
         println!("Welcome to black jack");
 
-        player_hand.draw_cards(2, &mut deck);
-        dealer_hand.draw_cards(2, &mut deck);
+        player_hand.draw_cards(2, &mut self.deck);
+        dealer_hand.draw_cards(2, &mut self.deck);
+
+        player_hand.calculate_hand();
+        dealer_hand.calculate_hand();
+
+        if player_hand.value == 21 && dealer_hand.value != 21
+        {
+            switch_color(Color::GREEN);
+            println!("You won!");
+        }else if dealer_hand.value == 21 && player_hand.value != 21 {
+            switch_color(Color::RED);
+            println!("Dealer won!");
+        }else if dealer_hand.value == 21 && player_hand.value == 21 {
+            switch_color(Color::RESET);
+            println!("Push!");
+        }
 
         let mut player_busted: bool = false;
         let mut player_bet: usize = 0;
 
         let mut user_input: String;
 
-        //Pregame, storing bets
-        println!("Enter your bet:");
-        loop {
-            switch_color(Color::RESET);
-
-            user_input = String::new();
-            std::io::stdin()
-                .read_line(&mut user_input)
-                .expect("Failure when fetching input");
-    
-            let parse_result = user_input
-                .trim()
-                .parse();
-
-            if parse_result.is_ok()
-            {
-                player_bet = parse_result.unwrap();
-
-                if player_bet > self.chips
-                {
-                    player_bet = self.chips;
-                    switch_color(Color::GREEN);
-                    println!("All in!");
-                }else {
-                    switch_color(Color::GREEN);
-                    println!("You bet: {0}", player_bet);
-                }
-
-                break;
-            }else {
-                clear_terminal();
-                switch_color(Color::RED);
-                println!("Enter your bet");
-                continue;
-            }
-        }
+        player_bet = self.get_bet();
 
         //In game: hitting, standing and doubling down
         loop {
@@ -66,11 +45,8 @@ impl Game
             switch_color(Color::RESET);
             println!("Dealer hand:");
             dealer_hand.render_hand(false);
-
-            print!("\n");
-
             dealer_hand.calculate_hand();
-            println!("Dealer total value: {0}", dealer_hand.cards[0].val);
+            println!("\nDealer total value: {0}", dealer_hand.cards[0].val);
             
             println!("Your hand:");
             player_hand.render_hand(true);
@@ -88,7 +64,7 @@ impl Game
                 "hit" => {
                     clear_terminal();
 
-                    player_hand.draw_cards(1, &mut deck);
+                    player_hand.draw_cards(1, &mut self.deck);
                     player_hand.calculate_hand();
 
                     if player_hand.value > 21
@@ -112,7 +88,7 @@ impl Game
                 },
 
                 "double down" => {
-                    player_hand.draw_cards(1, &mut deck);
+                    player_hand.draw_cards(1, &mut self.deck);
                     player_hand.calculate_hand();
 
                     player_bet *= 2;
@@ -153,7 +129,7 @@ impl Game
         if !player_busted
         {
             while dealer_hand.value < 17 {
-                dealer_hand.draw_cards(1, &mut deck);
+                dealer_hand.draw_cards(1, &mut self.deck);
                 dealer_hand.calculate_hand();
             }
         }
@@ -168,19 +144,25 @@ impl Game
         player_hand.render_hand(true);
         println!("\nPlayer total value: {0}", player_hand.value);
 
-        if ((player_hand.value > dealer_hand.value && player_hand.value <= 21) || dealer_hand.value > 21) && !player_busted
+        if ((player_hand.value > dealer_hand.value && player_hand.value < 22) || dealer_hand.value > 21) && !player_busted
         {
             switch_color(Color::GREEN);
 
             println!("\nYou won!");
-            self.chips += player_bet;
+
+            if player_hand.value == 21 && player_hand.cards.len() == 2
+            {
+                self.chips += player_bet + player_bet / 2;
+            }else {
+                self.chips += player_bet;
+            }
 
         }else if dealer_hand.value > player_hand.value{
 
             switch_color(Color::RED);
             println!("\nDealer won");
 
-            if(self.chips >= player_bet)
+            if self.chips >= player_bet
             {
                 self.chips -= player_bet;
             }else {

@@ -1,15 +1,19 @@
+use std::{fs, process::Output};
+use serde_json::*;
+
 mod rendering;
 mod game;
 mod cards;
 mod blackjack;
 mod roulette;
+mod slots;
 
-use rendering::{Color, clear_terminal, switch_color};
-use game::{Game};
+use rendering::*;
+use game::*;
+use cards::*;
 
 fn main() {
     clear_terminal();
-
-    let mut game: Game = Game { chips: 1000 };
+    let mut game: Game = Game { chips: 1000, deck: Deck::new(4) };
     game.init();
 }
